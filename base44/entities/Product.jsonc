@@ -1,0 +1,112 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Product name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Product description"
+    },
+    "price": {
+      "type": "number",
+      "description": "Base price in Rs."
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Product image URLs"
+    },
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "length": {
+          "type": "number",
+          "description": "Length in cm"
+        },
+        "width": {
+          "type": "number",
+          "description": "Width in cm"
+        },
+        "height": {
+          "type": "number",
+          "description": "Height in cm"
+        }
+      },
+      "description": "Product dimensions"
+    },
+    "variations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Variation name (e.g., 'Color', 'Size')"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Available options"
+          },
+          "option_images": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Optional image URL for a specific option (keyed by option name)"
+          },
+          "option_prices": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Optional price for a specific option (keyed by option name)"
+          }
+        }
+      },
+      "description": "Product variations"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Hidden search keywords - not shown to customers, used to match searches better"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "toys",
+        "home_decor",
+        "accessories",
+        "clothing",
+        "bags"
+      ],
+      "description": "Product category"
+    },
+    "recommended_products": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Product IDs to recommend with this product"
+    },
+    "in_stock": {
+      "type": "boolean",
+      "default": true,
+      "description": "Stock availability"
+    }
+  },
+  "required": [
+    "name",
+    "price",
+    "dimensions"
+  ]
+}

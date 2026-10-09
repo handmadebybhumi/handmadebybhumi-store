@@ -1,0 +1,46 @@
+{
+  "name": "WishlistRequest",
+  "type": "object",
+  "properties": {
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Customer email"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Customer phone number"
+    },
+    "instagram_handle": {
+      "type": "string",
+      "description": "Customer Instagram handle"
+    },
+    "item_name": {
+      "type": "string",
+      "description": "Requested item name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Details about the requested item"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "reviewed",
+        "added"
+      ],
+      "default": "pending",
+      "description": "Request status"
+    }
+  },
+  "required": [
+    "customer_name",
+    "customer_email",
+    "customer_phone",
+    "item_name"
+  ]
+}

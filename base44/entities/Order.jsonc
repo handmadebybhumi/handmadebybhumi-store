@@ -1,0 +1,97 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Customer email"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Customer phone"
+    },
+    "customer_pincode": {
+      "type": "string",
+      "description": "Customer pincode"
+    },
+    "customer_instagram": {
+      "type": "string",
+      "description": "Customer Instagram handle"
+    },
+    "delivery_address": {
+      "type": "string",
+      "description": "Delivery address"
+    },
+    "customer_note": {
+      "type": "string",
+      "description": "Optional customer note"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "price": {
+            "type": "number"
+          },
+          "variations": {
+            "type": "object"
+          },
+          "dimensions": {
+            "type": "object"
+          },
+          "customization_preference": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Order items"
+    },
+    "subtotal": {
+      "type": "number",
+      "description": "Items total"
+    },
+    "packing_charge": {
+      "type": "number",
+      "description": "Packing charge"
+    },
+    "delivery_charge": {
+      "type": "number",
+      "description": "Delivery charge"
+    },
+    "total": {
+      "type": "number",
+      "description": "Total amount"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "confirmed",
+        "shipped",
+        "delivered",
+        "cancelled"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "customer_name",
+    "customer_email",
+    "items",
+    "total"
+  ]
+}
