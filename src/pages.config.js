@@ -5,8 +5,10 @@ import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 import Payment from './pages/Payment';
 import Wishlist from './pages/Wishlist';
+import AdminLogin from './pages/AdminLogin';
+import AdminProducts from './pages/AdminProducts';
+import AdminProductEdit from './pages/AdminProductEdit';
 import Layout from './Layout.jsx';
-
 
 export const PAGES = {
     "Home": Home,
@@ -16,6 +18,12 @@ export const PAGES = {
     "OrderSuccess": OrderSuccess,
     "Payment": Payment,
     "Wishlist": Wishlist,
+}
+
+export const ADMIN_PAGES = {
+    "AdminLogin": AdminLogin,
+    "AdminProducts": AdminProducts,
+    "AdminProductEdit": AdminProductEdit,
 }
 
 export const pagesConfig = {

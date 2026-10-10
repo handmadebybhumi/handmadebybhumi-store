@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { fetchProducts, fetchVariantsForProducts } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,25 +27,26 @@ export default function Home() {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', debouncedSearch, selectedCategory],
     queryFn: async () => {
-      const query = {};
-
-      if (isSearching) {
-        // Global search: matches name, description and the hidden tags,
-        // across the whole catalogue rather than the selected category
-        const term = debouncedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const pattern = { $regex: term, $options: 'i' };
-        query.$or = [{ name: pattern }, { description: pattern }, { tags: pattern }];
-      } else if (selectedCategory !== 'all') {
-        query.category = selectedCategory;
-      }
-
-      const page = await base44.entities.Product.filter(query, {
-        sort: '-created_date',
-        limit: 100,
+      return await fetchProducts({
+        search: isSearching ? debouncedSearch : '',
+        category: selectedCategory,
       });
-      return page.items;
     },
   });
+
+  // Fetch variants for all displayed products so ProductCard can show "From ₹" pricing
+  const productIds = products.map((p) => p.id);
+  const { data: variantsMap = {} } = useQuery({
+    queryKey: ['product-variants-batch', productIds],
+    queryFn: () => fetchVariantsForProducts(productIds),
+    enabled: productIds.length > 0,
+  });
+
+  // Attach variants to products so ProductCard can read them like the old Base44 shape
+  const productsWithVariants = products.map((p) => ({
+    ...p,
+    variations: variantsMap[p.id] || [],
+  }));
 
   return (
     <div>
@@ -106,7 +107,7 @@ export default function Home() {
               <h2 className="text-3xl md:text-4xl font-bold text-[#8B6F47] mb-2">Our Collection</h2>
               <p className="text-gray-600">
                 {isSearching
-                  ? `${products.length} ${products.length === 1 ? 'match' : 'matches'} for "${debouncedSearch}" across all categories`
+                  ? `${productsWithVariants.length} ${productsWithVariants.length === 1 ? 'match' : 'matches'} for "${debouncedSearch}" across all categories`
                   : 'Handpicked items for your home and loved ones'}
               </p>
             </div>
@@ -138,9 +139,9 @@ export default function Home() {
               </div>
             ))}
           </div>
-        ) : products.length > 0 ? (
+        ) : productsWithVariants.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product) => (
+            {productsWithVariants.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>

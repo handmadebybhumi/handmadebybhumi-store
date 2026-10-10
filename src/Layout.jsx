@@ -172,6 +172,7 @@ export default function Layout({ children, currentPageName }) {
                 <li><Link to={createPageUrl("Home")} className="hover:text-white">Shop</Link></li>
                 <li><Link to={createPageUrl("Wishlist")} className="hover:text-white">Wishlist</Link></li>
                 <li><Link to={createPageUrl("Cart")} className="hover:text-white">Cart</Link></li>
+                <li><Link to={createPageUrl("AdminLogin")} className="hover:text-white">Admin</Link></li>
               </ul>
             </div>
             <div>

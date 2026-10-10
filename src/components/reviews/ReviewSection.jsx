@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { fetchReviewsByProductId, createReview } from "@/lib/store";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,14 +21,11 @@ export default function ReviewSection({ productId }) {
 
   const { data: reviews = [], isLoading } = useQuery({
     queryKey: ['reviews', productId],
-    queryFn: async () => {
-      const allReviews = await base44.entities.Review.list('-created_date');
-      return allReviews.filter(review => review.product_id === productId);
-    }
+    queryFn: () => fetchReviewsByProductId(productId),
   });
 
   const createReviewMutation = useMutation({
-    mutationFn: (data) => base44.entities.Review.create(data),
+    mutationFn: (data) => createReview(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews', productId] });
       setShowForm(false);
@@ -208,7 +205,7 @@ export default function ReviewSection({ productId }) {
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <p className="font-semibold text-gray-900">{review.customer_name}</p>
-                      <p className="text-sm text-gray-500">{new Date(review.created_date).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-500">{new Date(review.created_at).toLocaleDateString()}</p>
                     </div>
                     {renderStars(review.rating)}
                   </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { fetchProductById, fetchVariantsByProductId, fetchProductsByCategory, fetchProductsByIds } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,24 +26,29 @@ export default function ProductDetail() {
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', productId],
-    queryFn: async () => {
-      const products = await base44.entities.Product.list();
-      return products.find(p => p.id === productId);
-    },
+    queryFn: () => fetchProductById(productId),
+    enabled: !!productId
+  });
+
+  const { data: variants = [] } = useQuery({
+    queryKey: ['product-variants', productId],
+    queryFn: () => fetchVariantsByProductId(productId),
     enabled: !!productId
   });
 
   useEffect(() => {
-    if (product?.variations) {
+    if (variants && variants.length > 0) {
       const initial = {};
-      product.variations.forEach(variation => {
-        if (variation.options?.length > 0) {
+      variants.forEach(variation => {
+        if (variation.options && variation.options.length > 0) {
           initial[variation.name] = variation.options[0];
         }
       });
       setSelectedVariations(initial);
+    } else {
+      setSelectedVariations({});
     }
-  }, [product]);
+  }, [variants]);
 
   const addToCart = () => {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -105,7 +110,7 @@ export default function ProductDetail() {
 
   const images = product.images && product.images.length > 0 ? product.images : [];
 
-  const variations = product.variations || [];
+  const variations = variants || [];
 
   // Photo belonging to the currently selected options (e.g. a specific colour)
   const variationImage = variations
@@ -232,7 +237,7 @@ export default function ProductDetail() {
           )}
 
           {/* Variations */}
-          {product.variations?.map((variation, index) => (
+          {variations.map((variation, index) => (
             <div key={index} className="mb-6">
               <label className="block text-sm font-semibold text-gray-900 mb-3">
                 {variation.name}
@@ -322,7 +327,7 @@ export default function ProductDetail() {
         <RelatedProducts 
           currentProductId={productId} 
           category={product.category}
-          recommendedProductIds={product.recommended_products}
+          recommendedProductIds={product.recommended_product_ids}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { createOrder, createOrderItems } from "@/lib/store";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,11 +58,26 @@ export default function Checkout() {
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData) => {
-      return await base44.entities.Order.create(orderData);
+      const order = await createOrder({
+        customer_name: orderData.customer_name,
+        customer_email: orderData.customer_email,
+        customer_phone: orderData.customer_phone,
+        customer_pincode: orderData.customer_pincode,
+        customer_instagram: orderData.customer_instagram,
+        delivery_address: orderData.delivery_address,
+        customer_note: orderData.customer_note,
+        subtotal: orderData.subtotal,
+        packing_charge: orderData.packing_charge,
+        delivery_charge: orderData.delivery_charge,
+        total: orderData.total,
+      });
+      await createOrderItems(order.id, orderData.items);
+      return order;
     },
     onSuccess: (order) => {
       localStorage.setItem('pending_order', JSON.stringify({
         orderId: order.id,
+        orderNumber: order.order_number,
         total: total,
         customerInfo: customerInfo
       }));
@@ -100,7 +115,6 @@ export default function Checkout() {
       packing_charge: PACKING_CHARGE,
       delivery_charge: deliveryCharge,
       total: total,
-      status: "pending"
     };
 
     createOrderMutation.mutate(orderData);

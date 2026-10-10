@@ -1,41 +1,54 @@
 import React from "react";
+import { fetchProductsByCategory, fetchProductsByIds, fetchVariantsForProducts } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import ProductCard from "../catalog/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function RelatedProducts({ currentProductId, category, recommendedProductIds }) {
-  const { data: allProducts = [], isLoading } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => base44.entities.Product.list('-created_date'),
-    initialData: [],
+  // Fetch recommended products by their IDs
+  const { data: recommended = [] } = useQuery({
+    queryKey: ['recommended-products', recommendedProductIds],
+    queryFn: () => fetchProductsByIds(recommendedProductIds || []),
+    enabled: !!(recommendedProductIds && recommendedProductIds.length > 0),
   });
 
-  // First try to show recommended products if specified
-  let relatedProducts = [];
-  
-  if (recommendedProductIds && recommendedProductIds.length > 0) {
-    relatedProducts = allProducts.filter(product => 
-      recommendedProductIds.includes(product.id) && 
-      product.id !== currentProductId &&
-      product.in_stock
-    ).slice(0, 5);
-  }
-  
-  // If no recommended products or less than 3, fill with category-based products
+  // Fetch category-based products
+  const { data: categoryProducts = [], isLoading } = useQuery({
+    queryKey: ['category-products', category, currentProductId],
+    queryFn: () => fetchProductsByCategory(category, currentProductId),
+    enabled: !!category,
+  });
+
+  // Combine: recommended first, then fill with category products
+  const recommendedFiltered = (recommended || []).filter(
+    (p) => p.id !== currentProductId
+  );
+
+  let relatedProducts = recommendedFiltered.slice(0, 5);
+
   if (relatedProducts.length < 3) {
-    const categoryProducts = allProducts.filter(product => 
-      product.id !== currentProductId && 
-      product.category === category &&
-      product.in_stock &&
-      !recommendedProductIds?.includes(product.id)
-    );
-    
     const needed = 5 - relatedProducts.length;
-    relatedProducts = [...relatedProducts, ...categoryProducts.slice(0, needed)];
+    const recommendedIds = recommendedFiltered.map((p) => p.id);
+    const fillers = (categoryProducts || [])
+      .filter((p) => !recommendedIds.includes(p.id))
+      .slice(0, needed);
+    relatedProducts = [...relatedProducts, ...fillers];
   }
 
-  if (relatedProducts.length === 0) {
+  // Fetch variants for the related products so ProductCard can show "From ₹" pricing
+  const relatedIds = relatedProducts.map((p) => p.id);
+  const { data: variantsMap = {} } = useQuery({
+    queryKey: ['product-variants-batch', relatedIds],
+    queryFn: () => fetchVariantsForProducts(relatedIds),
+    enabled: relatedIds.length > 0,
+  });
+
+  const productsWithVariants = relatedProducts.map((p) => ({
+    ...p,
+    variations: variantsMap[p.id] || [],
+  }));
+
+  if (productsWithVariants.length === 0 && !isLoading) {
     return null;
   }
 
@@ -54,7 +67,7 @@ export default function RelatedProducts({ currentProductId, category, recommende
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          {relatedProducts.map((product) => (
+          {productsWithVariants.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

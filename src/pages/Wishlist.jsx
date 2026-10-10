@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { createWishlistRequest } from "@/lib/store";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +20,7 @@ export default function Wishlist() {
   const [submitted, setSubmitted] = useState(false);
 
   const createWishlistMutation = useMutation({
-    mutationFn: (data) => base44.entities.WishlistRequest.create(data),
+    mutationFn: (data) => createWishlistRequest(data),
     onSuccess: () => {
       setSubmitted(true);
       setFormData({
