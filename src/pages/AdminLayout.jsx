@@ -2,7 +2,7 @@ import React from 'react';
 import { useAdminAuth } from '@/lib/AdminAuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Package, LogOut, ArrowLeft, LayoutGrid } from 'lucide-react';
+import { Package, LogOut, ArrowLeft, LayoutGrid, ShoppingBag, Users, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function AdminLayout({ children }) {
@@ -55,10 +55,43 @@ export default function AdminLayout({ children }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Link to={createPageUrl('AdminDashboard')}>
+                <Button
+                  variant={window.location.pathname === createPageUrl('AdminDashboard') ? 'default' : 'ghost'}
+                  className={window.location.pathname === createPageUrl('AdminDashboard')
+                    ? 'bg-[#D97757] hover:bg-[#C55E3F] text-white'
+                    : 'text-gray-700 hover:text-[#D97757]'}
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Button>
+              </Link>
+              <Link to={createPageUrl('AdminOrders')}>
+                <Button
+                  variant={window.location.pathname === createPageUrl('AdminOrders') || window.location.pathname === createPageUrl('AdminOrderDetail') ? 'default' : 'ghost'}
+                  className={window.location.pathname === createPageUrl('AdminOrders') || window.location.pathname === createPageUrl('AdminOrderDetail')
+                    ? 'bg-[#D97757] hover:bg-[#C55E3F] text-white'
+                    : 'text-gray-700 hover:text-[#D97757]'}
+                >
+                  <ShoppingBag className="w-4 h-4 mr-2" />
+                  Orders
+                </Button>
+              </Link>
+              <Link to={createPageUrl('AdminCustomers')}>
+                <Button
+                  variant={window.location.pathname === createPageUrl('AdminCustomers') ? 'default' : 'ghost'}
+                  className={window.location.pathname === createPageUrl('AdminCustomers')
+                    ? 'bg-[#D97757] hover:bg-[#C55E3F] text-white'
+                    : 'text-gray-700 hover:text-[#D97757]'}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Customers
+                </Button>
+              </Link>
               <Link to={createPageUrl('AdminProducts')}>
                 <Button
-                  variant={window.location.pathname === createPageUrl('AdminProducts') ? 'default' : 'ghost'}
-                  className={window.location.pathname === createPageUrl('AdminProducts')
+                  variant={window.location.pathname === createPageUrl('AdminProducts') || window.location.pathname === createPageUrl('AdminProductEdit') ? 'default' : 'ghost'}
+                  className={window.location.pathname === createPageUrl('AdminProducts') || window.location.pathname === createPageUrl('AdminProductEdit')
                     ? 'bg-[#D97757] hover:bg-[#C55E3F] text-white'
                     : 'text-gray-700 hover:text-[#D97757]'}
                 >

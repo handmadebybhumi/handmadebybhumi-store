@@ -18,7 +18,7 @@ export default function AdminLogin() {
 
   useEffect(() => {
     if (!loading && isAdmin) {
-      navigate(createPageUrl('AdminProducts'));
+      navigate(createPageUrl('AdminDashboard'));
     }
   }, [isAdmin, loading, navigate]);
 

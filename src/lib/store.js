@@ -377,6 +377,178 @@ export async function createOrderItems(orderId, items) {
   return data;
 }
 
+// ─── Admin: Orders ──────────────────────────────────────────────────────────
+
+export async function adminFetchOrders({ search = '', status = 'all', paymentStatus = 'all', fulfillmentStatus = 'all', sortBy = 'created_at', sortDir = 'desc' } = {}) {
+  let query = supabase
+    .from('orders')
+    .select('*');
+
+  if (search && search.trim()) {
+    const term = search.trim();
+    query = query.or(`order_number.ilike.%${term}%,customer_name.ilike.%${term}%,customer_email.ilike.%${term}%,customer_phone.ilike.%${term}%`);
+  }
+  if (status && status !== 'all') {
+    query = query.eq('status', status);
+  }
+  if (paymentStatus && paymentStatus !== 'all') {
+    query = query.eq('payment_status', paymentStatus);
+  }
+  if (fulfillmentStatus && fulfillmentStatus !== 'all') {
+    query = query.eq('fulfillment_status', fulfillmentStatus);
+  }
+
+  query = query.order(sortBy, { ascending: sortDir === 'asc' });
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+export async function adminFetchOrderById(id) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function adminFetchOrderItems(orderId) {
+  const { data, error } = await supabase
+    .from('order_items')
+    .select('*')
+    .eq('order_id', orderId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function adminUpdateOrderStatus(orderId, { status, paymentStatus, fulfillmentStatus, notes } = {}) {
+  const { data, error } = await supabase
+    .rpc('update_order_status', {
+      p_order_id: orderId,
+      p_status: status || null,
+      p_payment_status: paymentStatus || null,
+      p_fulfillment_status: fulfillmentStatus || null,
+      p_notes: notes !== undefined ? notes : null,
+    });
+  if (error) throw error;
+  return data;
+}
+
+export async function adminFetchDashboardStats() {
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('id, total, status, payment_status, fulfillment_status, created_at');
+  if (error) throw error;
+
+  const allOrders = orders || [];
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  const todayOrders = allOrders.filter((o) => o.created_at >= startOfToday);
+  const monthOrders = allOrders.filter((o) => o.created_at >= startOfMonth);
+
+  const totalRevenue = allOrders
+    .filter((o) => o.payment_status === 'paid')
+    .reduce((sum, o) => sum + parseFloat(o.total), 0);
+  const monthRevenue = monthOrders
+    .filter((o) => o.payment_status === 'paid')
+    .reduce((sum, o) => sum + parseFloat(o.total), 0);
+
+  const pendingFulfillment = allOrders.filter((o) =>
+    o.fulfillment_status === 'pending' || o.fulfillment_status === 'processing' || o.fulfillment_status === 'packed'
+  );
+
+  const statusCounts = {
+    pending: allOrders.filter((o) => o.status === 'pending').length,
+    confirmed: allOrders.filter((o) => o.status === 'confirmed').length,
+    processing: allOrders.filter((o) => o.status === 'processing').length,
+    shipped: allOrders.filter((o) => o.status === 'shipped').length,
+    delivered: allOrders.filter((o) => o.status === 'delivered').length,
+    cancelled: allOrders.filter((o) => o.status === 'cancelled').length,
+  };
+
+  const paymentCounts = {
+    pending: allOrders.filter((o) => o.payment_status === 'pending').length,
+    paid: allOrders.filter((o) => o.payment_status === 'paid').length,
+    failed: allOrders.filter((o) => o.payment_status === 'failed').length,
+    refunded: allOrders.filter((o) => o.payment_status === 'refunded').length,
+    cod: allOrders.filter((o) => o.payment_status === 'cod').length,
+  };
+
+  const recentOrders = allOrders
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 5);
+
+  return {
+    totalOrders: allOrders.length,
+    todayOrders: todayOrders.length,
+    monthOrders: monthOrders.length,
+    totalRevenue,
+    monthRevenue,
+    pendingFulfillment: pendingFulfillment.length,
+    statusCounts,
+    paymentCounts,
+    recentOrders,
+  };
+}
+
+export async function adminFetchCustomers({ search = '' } = {}) {
+  let query = supabase
+    .from('orders')
+    .select('customer_name, customer_email, customer_phone, customer_pincode, customer_instagram, delivery_address, total, status, payment_status, created_at, id');
+
+  if (search && search.trim()) {
+    const term = search.trim();
+    query = query.or(`customer_name.ilike.%${term}%,customer_email.ilike.%${term}%,customer_phone.ilike.%${term}%,customer_instagram.ilike.%${term}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  // Group by email to build customer profiles
+  const customerMap = new Map();
+  (data || []).forEach((order) => {
+    const email = order.customer_email;
+    if (!customerMap.has(email)) {
+      customerMap.set(email, {
+        name: order.customer_name,
+        email: order.customer_email,
+        phone: order.customer_phone,
+        pincode: order.customer_pincode,
+        instagram: order.customer_instagram,
+        address: order.delivery_address,
+        orderCount: 0,
+        totalSpent: 0,
+        firstOrder: order.created_at,
+        lastOrder: order.created_at,
+        orderIds: [],
+      });
+    }
+    const c = customerMap.get(email);
+    c.orderCount += 1;
+    c.totalSpent += parseFloat(order.total);
+    if (order.created_at < c.firstOrder) c.firstOrder = order.created_at;
+    if (order.created_at > c.lastOrder) c.lastOrder = order.created_at;
+    c.orderIds.push(order.id);
+  });
+
+  return Array.from(customerMap.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+}
+
+export async function adminFetchOrdersByEmail(email) {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('customer_email', email)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
 // ─── Reviews ────────────────────────────────────────────────────────────────
 
 export async function fetchReviewsByProductId(productId) {
