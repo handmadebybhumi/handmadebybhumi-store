@@ -51,14 +51,14 @@ export default function ProductDetail() {
   }, [variants]);
 
   // Determine the selected variant's image (if any variant overrides images)
-  const selectedVariantImage = variations
+  const selectedVariantImage = variants
     .map(variation => variation.option_images?.[selectedVariations[variation.name]])
     .find(Boolean);
 
   // Determine the selected variant's SKU (if any variant overrides SKUs)
   const selectedVariantSku = (() => {
-    let sku = product.sku || '';
-    for (const variation of variations) {
+    let sku = product?.sku || '';
+    for (const variation of variants) {
       const optionSku = variation.option_skus?.[selectedVariations[variation.name]];
       if (optionSku) sku = optionSku;
     }
@@ -67,8 +67,8 @@ export default function ProductDetail() {
 
   // Check stock availability for the currently selected variant options
   const isVariantInStock = (() => {
-    if (!product.in_stock) return false;
-    for (const variation of variations) {
+    if (!product?.in_stock) return false;
+    for (const variation of variants) {
       const selectedOption = selectedVariations[variation.name];
       if (selectedOption && variation.option_stock) {
         const optionStock = variation.option_stock[selectedOption];
