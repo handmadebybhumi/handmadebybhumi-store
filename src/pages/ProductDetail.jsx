@@ -50,16 +50,52 @@ export default function ProductDetail() {
     }
   }, [variants]);
 
+  // Determine the selected variant's image (if any variant overrides images)
+  const selectedVariantImage = variations
+    .map(variation => variation.option_images?.[selectedVariations[variation.name]])
+    .find(Boolean);
+
+  // Determine the selected variant's SKU (if any variant overrides SKUs)
+  const selectedVariantSku = (() => {
+    let sku = product.sku || '';
+    for (const variation of variations) {
+      const optionSku = variation.option_skus?.[selectedVariations[variation.name]];
+      if (optionSku) sku = optionSku;
+    }
+    return sku || '';
+  })();
+
+  // Check stock availability for the currently selected variant options
+  const isVariantInStock = (() => {
+    if (!product.in_stock) return false;
+    for (const variation of variations) {
+      const selectedOption = selectedVariations[variation.name];
+      if (selectedOption && variation.option_stock) {
+        const optionStock = variation.option_stock[selectedOption];
+        if (typeof optionStock === 'number' && optionStock === 0) return false;
+      }
+    }
+    return true;
+  })();
+
   const addToCart = () => {
+    if (!isVariantInStock) return;
+
+    // Use variant-specific image if available, falling back to product images
+    const itemImages = selectedVariantImage
+      ? [selectedVariantImage, ...(product.images || []).filter(img => img !== selectedVariantImage)]
+      : (product.images || []);
+
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     const cartItem = {
       id: product.id,
       name: product.name,
       price: selectedPrice,
-      images: product.images || [],
+      images: itemImages,
       dimensions: product.dimensions,
       quantity: quantity,
       selectedVariations: selectedVariations,
+      sku: selectedVariantSku,
       customization_preference: customizationPreference
     };
     
@@ -113,9 +149,7 @@ export default function ProductDetail() {
   const variations = variants || [];
 
   // Photo belonging to the currently selected options (e.g. a specific colour)
-  const variationImage = variations
-    .map(variation => variation.option_images?.[selectedVariations[variation.name]])
-    .find(Boolean);
+  const variationImage = selectedVariantImage;
 
   const gallery = variationImage && !images.includes(variationImage)
     ? [variationImage, ...images]
@@ -124,13 +158,20 @@ export default function ProductDetail() {
   const mainImage = selectedImage || gallery[0] || null;
 
   // Price belonging to the currently selected options, falling back to the base price
-  let selectedPrice = product.price;
+  let selectedPrice = parseFloat(product.price);
   variations.forEach(variation => {
     const optionPrice = variation.option_prices?.[selectedVariations[variation.name]];
     if (typeof optionPrice === 'number') {
       selectedPrice = optionPrice;
     }
   });
+
+  // Show sale price if available and no variant override is active
+  const hasVariantPriceOverride = variations.some(v => {
+    const opt = v.option_prices?.[selectedVariations[v.name]];
+    return typeof opt === 'number';
+  });
+  const displayPrice = (!hasVariantPriceOverride && product.sale_price) ? parseFloat(product.sale_price) : selectedPrice;
 
   const handleVariationSelect = (variationName, option) => {
     setSelectedVariations(prev => ({ ...prev, [variationName]: option }));
@@ -163,7 +204,7 @@ export default function ProductDetail() {
                 <Package className="w-32 h-32 text-[#D97757]/30" />
               </div>
             )}
-            {!product.in_stock && (
+            {!isVariantInStock && (
               <Badge className="absolute top-4 right-4 bg-gray-500 text-white">
                 Out of Stock
               </Badge>
@@ -203,7 +244,15 @@ export default function ProductDetail() {
               </Badge>
             )}
             <h1 className="text-4xl font-bold text-[#8B6F47] mb-4">{product.name}</h1>
-            <p className="text-4xl font-bold text-[#D97757]">₹{selectedPrice}</p>
+            <div className="flex items-baseline gap-3">
+              <p className="text-4xl font-bold text-[#D97757]">₹{displayPrice}</p>
+              {!hasVariantPriceOverride && product.sale_price && (
+                <span className="text-xl text-gray-400 line-through">₹{parseFloat(product.price)}</span>
+              )}
+            </div>
+            {selectedVariantSku && (
+              <p className="text-sm text-gray-500 mt-1">SKU: {selectedVariantSku}</p>
+            )}
           </div>
 
           {product.description && (
@@ -243,20 +292,29 @@ export default function ProductDetail() {
                 {variation.name}
               </label>
               <div className="flex flex-wrap gap-2">
-                {variation.options?.map((option) => (
-                  <Button
-                    key={option}
-                    variant={selectedVariations[variation.name] === option ? "default" : "outline"}
-                    onClick={() => handleVariationSelect(variation.name, option)}
-                    className={
-                      selectedVariations[variation.name] === option
-                        ? 'bg-[#D97757] hover:bg-[#C55E3F] text-white'
-                        : 'border-2 border-gray-200 hover:border-[#D97757] hover:bg-[#FFF8F0]'
-                    }
-                  >
-                    {option}
-                  </Button>
-                ))}
+                {variation.options?.map((option) => {
+                  const optionStock = variation.option_stock?.[option];
+                  const isOutOfStock = typeof optionStock === 'number' && optionStock === 0;
+                  const isSelected = selectedVariations[variation.name] === option;
+                  return (
+                    <Button
+                      key={option}
+                      variant={isSelected ? "default" : "outline"}
+                      disabled={isOutOfStock}
+                      onClick={() => handleVariationSelect(variation.name, option)}
+                      className={
+                        isSelected
+                          ? 'bg-[#D97757] hover:bg-[#C55E3F] text-white'
+                          : isOutOfStock
+                            ? 'border-2 border-gray-200 text-gray-300 cursor-not-allowed line-through'
+                            : 'border-2 border-gray-200 hover:border-[#D97757] hover:bg-[#FFF8F0]'
+                      }
+                    >
+                      {option}
+                      {isOutOfStock && ' (Out)'}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -310,11 +368,11 @@ export default function ProductDetail() {
           <Button
             size="lg"
             onClick={addToCart}
-            disabled={!product.in_stock}
+            disabled={!isVariantInStock}
             className="w-full bg-[#D97757] hover:bg-[#C55E3F] text-white text-lg py-6 shadow-lg hover:shadow-xl transition-all"
           >
             <ShoppingCart className="w-5 h-5 mr-2" />
-            {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
+            {isVariantInStock ? 'Add to Cart' : 'Out of Stock'}
           </Button>
         </div>
       </div>

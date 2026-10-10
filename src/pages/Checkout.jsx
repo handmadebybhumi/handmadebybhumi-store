@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { createOrder, createOrderItems } from "@/lib/store";
+import { createOrder, createOrderItems, verifyCartPrices } from "@/lib/store";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,7 @@ export default function Checkout() {
     note: ""
   });
   const [error, setError] = useState(null);
+  const [priceWarning, setPriceWarning] = useState(null);
 
   useEffect(() => {
     const storedCart = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -51,13 +52,31 @@ export default function Checkout() {
     return maxDimension;
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
   const maxDimension = calculateMaxDimension();
   const deliveryCharge = maxDimension + 200;
   const total = subtotal + PACKING_CHARGE + deliveryCharge;
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData) => {
+      // Re-verify all cart prices from the database before creating the order
+      const verifiedItems = await verifyCartPrices(orderData.items);
+
+      // Check for any invalid or out-of-stock items
+      const invalidItems = verifiedItems.filter((item) => !item._valid);
+      if (invalidItems.length > 0) {
+        throw new Error('Some items in your cart are no longer available. Please review your cart and try again.');
+      }
+
+      const outOfStockItems = verifiedItems.filter((item) => !item._inStock);
+      if (outOfStockItems.length > 0) {
+        throw new Error('Some selected options are now out of stock. Please review your cart and try again.');
+      }
+
+      // Use the verified prices for the order subtotal
+      const verifiedSubtotal = verifiedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const verifiedTotal = verifiedSubtotal + orderData.packing_charge + orderData.delivery_charge;
+
       const order = await createOrder({
         customer_name: orderData.customer_name,
         customer_email: orderData.customer_email,
@@ -66,26 +85,37 @@ export default function Checkout() {
         customer_instagram: orderData.customer_instagram,
         delivery_address: orderData.delivery_address,
         customer_note: orderData.customer_note,
-        subtotal: orderData.subtotal,
+        subtotal: verifiedSubtotal,
         packing_charge: orderData.packing_charge,
         delivery_charge: orderData.delivery_charge,
-        total: orderData.total,
+        total: verifiedTotal,
       });
-      await createOrderItems(order.id, orderData.items);
-      return order;
+
+      // Save order items with verified prices
+      await createOrderItems(order.id, verifiedItems.map(item => ({
+        product_id: item.id,
+        product_name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        variations: item.selectedVariations || {},
+        dimensions: item.dimensions || {},
+        customization_preference: item.customization_preference || "",
+      })));
+
+      return { ...order, verifiedTotal };
     },
     onSuccess: (order) => {
       localStorage.setItem('pending_order', JSON.stringify({
         orderId: order.id,
         orderNumber: order.order_number,
-        total: total,
+        total: order.verifiedTotal,
         customerInfo: customerInfo
       }));
       
       navigate(createPageUrl("Payment"));
     },
     onError: (error) => {
-      setError("Failed to create order. Please try again.");
+      setError(error.message || "Failed to create order. Please try again.");
       console.error("Order creation error:", error);
     }
   });
@@ -271,7 +301,7 @@ export default function Checkout() {
                         <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-[#D97757]">₹{(item.price * item.quantity).toFixed(2)}</p>
+                        <p className="font-semibold text-[#D97757]">₹{(parseFloat(item.price) * item.quantity).toFixed(2)}</p>
                       </div>
                     </div>
                   );

@@ -42,7 +42,7 @@ export default function Cart() {
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
 
   if (cart.length === 0) {
     return (
@@ -79,7 +79,7 @@ export default function Cart() {
             const mainImage = item.images && item.images.length > 0 ? item.images[0] : null;
             
             return (
-              <Card key={index} className="border-2 border-gray-100 hover:border-[#D97757]/30 transition-colors">
+              <Card key={`${item.id}-${index}`} className="border-2 border-gray-100 hover:border-[#D97757]/30 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex gap-4">
                     {/* Image */}
@@ -101,7 +101,7 @@ export default function Cart() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-lg text-gray-900 mb-1">{item.name}</h3>
                       {Object.keys(item.selectedVariations || {}).length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
+                        <div className="flex flex-wrap gap-2 mb-1">
                           {Object.entries(item.selectedVariations).map(([key, value]) => (
                             <span key={key} className="text-sm text-gray-600">
                               {key}: <span className="font-medium">{value}</span>
@@ -109,12 +109,15 @@ export default function Cart() {
                           ))}
                         </div>
                       )}
+                      {item.sku && (
+                        <p className="text-xs text-gray-400 mb-1">SKU: {item.sku}</p>
+                      )}
                       {item.customization_preference && (
                         <p className="text-xs text-gray-500 italic mb-2">
                           Note: {item.customization_preference}
                         </p>
                       )}
-                      <p className="text-2xl font-bold text-[#D97757]">₹{item.price}</p>
+                      <p className="text-2xl font-bold text-[#D97757]">₹{parseFloat(item.price).toFixed(0)}</p>
                     </div>
 
                     {/* Quantity & Remove */}

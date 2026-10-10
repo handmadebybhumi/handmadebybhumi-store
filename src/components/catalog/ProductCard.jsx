@@ -12,9 +12,19 @@ export default function ProductCard({ product }) {
     (variation) => Object.values(variation.option_prices || {})
   );
   const startingPrice = optionPrices.length > 0 ? Math.min(...optionPrices) : product.price;
-  const showFromPrice = startingPrice < product.price;
+  const showFromPrice = optionPrices.length > 0;
+  const hasVariants = (product.variations || []).length > 0;
+
+  const detailUrl = `${createPageUrl("ProductDetail")}?id=${product.id}`;
 
   const addToCart = (e) => {
+    // If product has variants, redirect to detail page to choose options
+    if (hasVariants) {
+      e.preventDefault();
+      window.location.href = detailUrl;
+      return;
+    }
+
     e.preventDefault();
     
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -26,11 +36,12 @@ export default function ProductCard({ product }) {
       cart.push({
         id: product.id,
         name: product.name,
-        price: startingPrice,
+        price: parseFloat(product.price),
         images: product.images || [],
         dimensions: product.dimensions,
         quantity: 1,
         selectedVariations: {},
+        sku: product.sku || '',
         customization_preference: ""
       });
     }
@@ -48,7 +59,7 @@ export default function ProductCard({ product }) {
   const mainImage = product.images && product.images.length > 0 ? product.images[0] : null;
 
   return (
-    <Link to={`${createPageUrl("ProductDetail")}?id=${product.id}`}>
+    <Link to={detailUrl}>
       <Card className="group overflow-hidden border-2 border-transparent hover:border-[#D97757] transition-all duration-300 hover:shadow-xl bg-white">
         <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-[#FFF8F0] to-[#FFE8D6]">
           {mainImage ? (
@@ -72,7 +83,7 @@ export default function ProductCard({ product }) {
               onClick={addToCart}
             >
               <ShoppingCart className="w-4 h-4 mr-1" />
-              Add
+              {hasVariants ? 'Choose' : 'Add'}
             </Button>
           )}
         </div>

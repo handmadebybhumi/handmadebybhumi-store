@@ -255,6 +255,81 @@ export async function fetchCategories() {
   return data || [];
 }
 
+// ─── Server-side price verification ─────────────────────────────────────────
+// Recalculates the true price for each cart item by fetching the product and
+// its variants from the database. Never trusts a price submitted by the browser.
+
+export async function verifyCartPrices(cartItems) {
+  const productIds = [...new Set(cartItems.map((item) => item.id))];
+  if (productIds.length === 0) return [];
+
+  // Fetch all products in the cart
+  const { data: products, error: prodError } = await supabase
+    .from('products')
+    .select('*')
+    .in('id', productIds);
+  if (prodError) throw prodError;
+
+  // Fetch all variants for those products
+  const { data: variants, error: varError } = await supabase
+    .from('product_variants')
+    .select('*')
+    .in('product_id', productIds)
+    .order('sort_order', { ascending: true });
+  if (varError) throw varError;
+
+  const productMap = new Map(products.map((p) => [p.id, p]));
+  const variantMap = new Map();
+  (variants || []).forEach((v) => {
+    if (!variantMap.has(v.product_id)) variantMap.set(v.product_id, []);
+    variantMap.get(v.product_id).push(v);
+  });
+
+  return cartItems.map((item) => {
+    const product = productMap.get(item.id);
+    if (!product) {
+      return { ...item, _valid: false, _error: 'Product no longer available' };
+    }
+
+    const productVariants = variantMap.get(item.id) || [];
+    let verifiedPrice = parseFloat(product.price);
+
+    // Apply variant option price overrides from the database
+    if (item.selectedVariations) {
+      for (const variant of productVariants) {
+        const selectedOption = item.selectedVariations[variant.name];
+        if (selectedOption && variant.option_prices) {
+          const optionPrice = variant.option_prices[selectedOption];
+          if (typeof optionPrice === 'number') {
+            verifiedPrice = optionPrice;
+          }
+        }
+      }
+    }
+
+    // Check stock availability per variant option
+    let inStock = product.in_stock;
+    if (item.selectedVariations) {
+      for (const variant of productVariants) {
+        const selectedOption = item.selectedVariations[variant.name];
+        if (selectedOption && variant.option_stock) {
+          const optionStock = variant.option_stock[selectedOption];
+          if (typeof optionStock === 'number' && optionStock === 0) {
+            inStock = false;
+          }
+        }
+      }
+    }
+
+    return {
+      ...item,
+      price: verifiedPrice,
+      _valid: true,
+      _inStock: inStock,
+    };
+  });
+}
+
 // ─── Orders ─────────────────────────────────────────────────────────────────
 
 export async function createOrder(orderData) {
