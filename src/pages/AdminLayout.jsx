@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAdminAuth } from '@/lib/AdminAuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Package, LogOut, ArrowLeft, LayoutGrid, ShoppingBag, Users, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,8 +18,7 @@ export default function AdminLayout({ children }) {
   }
 
   if (!isAdmin) {
-    navigate(createPageUrl('AdminLogin'));
-    return null;
+    return <Navigate to={createPageUrl('AdminLogin')} replace />;
   }
 
   const handleSignOut = async () => {
