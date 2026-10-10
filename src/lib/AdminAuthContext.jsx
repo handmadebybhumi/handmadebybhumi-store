@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 const AdminAuthContext = createContext();
@@ -64,10 +64,14 @@ export const AdminAuthProvider = ({ children }) => {
     };
   }, [checkAdminStatus]);
 
-  const signIn = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const signInWithMagicLink = async (email) => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/AdminLogin`,
+      },
+    });
     if (error) throw error;
-    return data;
   };
 
   const signOut = async () => {
@@ -83,7 +87,7 @@ export const AdminAuthProvider = ({ children }) => {
       isAdmin,
       loading,
       session,
-      signIn,
+      signInWithMagicLink,
       signOut,
     }}>
       {children}
