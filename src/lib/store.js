@@ -292,9 +292,11 @@ export async function verifyCartPrices(cartItems) {
     }
 
     const productVariants = variantMap.get(item.id) || [];
+
+    // Determine whether any variant option overrides the price
+    let hasVariantPriceOverride = false;
     let verifiedPrice = parseFloat(product.price);
 
-    // Apply variant option price overrides from the database
     if (item.selectedVariations) {
       for (const variant of productVariants) {
         const selectedOption = item.selectedVariations[variant.name];
@@ -302,9 +304,15 @@ export async function verifyCartPrices(cartItems) {
           const optionPrice = variant.option_prices[selectedOption];
           if (typeof optionPrice === 'number') {
             verifiedPrice = optionPrice;
+            hasVariantPriceOverride = true;
           }
         }
       }
+    }
+
+    // If no variant override, apply sale price if available
+    if (!hasVariantPriceOverride && product.sale_price) {
+      verifiedPrice = parseFloat(product.sale_price);
     }
 
     // Check stock availability per variant option
@@ -366,7 +374,6 @@ export async function createOrderItems(orderId, items) {
     variations: item.variations || {},
     dimensions: item.dimensions || {},
     customization_preference: item.customization_preference || '',
-    line_total: item.price * item.quantity,
   }));
 
   const { data, error } = await supabase

@@ -1,23 +1,40 @@
-import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Package, Home as HomeIcon, ShoppingBag, Shirt, Sparkles } from "lucide-react";
+import { Sparkles, Package, Home as HomeIcon, ShoppingBag, Shirt, Gift, Flower, KeyRound } from "lucide-react";
+import { fetchCategories } from "@/lib/store";
 
-const categories = [
-  { id: "all", label: "All Items", icon: Sparkles },
-  { id: "toys", label: "Toys", icon: Package },
-  { id: "home_decor", label: "Home Decor", icon: HomeIcon },
-  { id: "accessories", label: "Accessories", icon: ShoppingBag },
-  { id: "clothing", label: "Clothing", icon: Shirt },
-  { id: "bags", label: "Bags", icon: ShoppingBag }
-];
+const ICONS = {
+  toys: Package,
+  home_decor: HomeIcon,
+  accessories: ShoppingBag,
+  clothing: Shirt,
+  bags: ShoppingBag,
+  keychains: KeyRound,
+  flowers: Flower,
+  gifts: Gift,
+};
 
 export default function CategoryFilter({ selectedCategory, onCategoryChange }) {
+  const { data: dbCategories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: fetchCategories,
+  });
+
+  const categories = [
+    { id: "all", label: "All Items", icon: Sparkles },
+    ...dbCategories.map((c) => ({
+      id: c.name,
+      label: c.label || c.name.replace(/_/g, ' '),
+      icon: ICONS[c.name] || Sparkles,
+    })),
+  ];
+
   return (
     <div className="flex flex-wrap gap-2">
       {categories.map((category) => {
         const Icon = category.icon;
         const isActive = selectedCategory === category.id;
-        
+
         return (
           <Button
             key={category.id}

@@ -90,7 +90,7 @@ export default function ProductDetail() {
     const cartItem = {
       id: product.id,
       name: product.name,
-      price: selectedPrice,
+      price: displayPrice,
       images: itemImages,
       dimensions: product.dimensions,
       quantity: quantity,
