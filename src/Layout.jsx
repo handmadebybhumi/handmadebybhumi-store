@@ -62,8 +62,12 @@ export default function Layout({ children, currentPageName }) {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link to={createPageUrl("Home")} className="flex items-center gap-3 group">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#D97757] to-[#C55E3F] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                <Package className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-[#FFF8F0] flex-shrink-0 shadow-lg group-hover:shadow-xl transition-shadow">
+                <img
+                  src="/images/handmaebybhumi_logo.png"
+                  alt="Handmade By Bhumi logo"
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-[#8B6F47] tracking-tight">Handmade By Bhumi</h1>
@@ -159,7 +163,11 @@ export default function Layout({ children, currentPageName }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Package className="w-6 h-6" />
+                <img
+                  src="/images/handmaebybhumi_logo.png"
+                  alt="Handmade By Bhumi logo"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
                 <h3 className="text-xl font-bold">Handmade By Bhumi</h3>
               </div>
               <p className="text-white/80">

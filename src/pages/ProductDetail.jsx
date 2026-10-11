@@ -50,10 +50,12 @@ export default function ProductDetail() {
     }
   }, [variants]);
 
-  // Determine the selected variant's image (if any variant overrides images)
-  const selectedVariantImage = variants
-    .map(variation => variation.option_images?.[selectedVariations[variation.name]])
-    .find(Boolean);
+  // Use selected variant images first, with the product gallery as fallback.
+  const selectedVariantImages = variants.flatMap((variation) => {
+    const image = variation.option_images?.[selectedVariations[variation.name]];
+    return Array.isArray(image) ? image : image ? [image] : [];
+  });
+  const selectedVariantImage = selectedVariantImages[0] || null;
 
   // Determine the selected variant's SKU (if any variant overrides SKUs)
   const selectedVariantSku = (() => {
@@ -70,9 +72,10 @@ export default function ProductDetail() {
     if (!product?.in_stock) return false;
     for (const variation of variants) {
       const selectedOption = selectedVariations[variation.name];
+      if (selectedOption && variation.option_available?.[selectedOption] === false) return false;
       if (selectedOption && variation.option_stock) {
-        const optionStock = variation.option_stock[selectedOption];
-        if (typeof optionStock === 'number' && optionStock === 0) return false;
+        const optionStock = Number(variation.option_stock[selectedOption]);
+        if (Number.isFinite(optionStock) && optionStock <= 0) return false;
       }
     }
     return true;
@@ -83,7 +86,7 @@ export default function ProductDetail() {
 
     // Use variant-specific image if available, falling back to product images
     const itemImages = selectedVariantImage
-      ? [selectedVariantImage, ...(product.images || []).filter(img => img !== selectedVariantImage)]
+      ? [...selectedVariantImages, ...(product.images || []).filter(img => !selectedVariantImages.includes(img))]
       : (product.images || []);
 
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -151,27 +154,33 @@ export default function ProductDetail() {
   // Photo belonging to the currently selected options (e.g. a specific colour)
   const variationImage = selectedVariantImage;
 
-  const gallery = variationImage && !images.includes(variationImage)
-    ? [variationImage, ...images]
+  const gallery = selectedVariantImages.length > 0
+    ? [...selectedVariantImages, ...images.filter((image) => !selectedVariantImages.includes(image))]
     : images;
 
   const mainImage = selectedImage || gallery[0] || null;
 
   // Price belonging to the currently selected options, falling back to the base price
   let selectedPrice = parseFloat(product.price);
-  variations.forEach(variation => {
-    const optionPrice = variation.option_prices?.[selectedVariations[variation.name]];
-    if (typeof optionPrice === 'number') {
-      selectedPrice = optionPrice;
+  variations.forEach((variation) => {
+    const selectedOption = selectedVariations[variation.name];
+    const optionPrice = variation.option_prices?.[selectedOption];
+    const optionSalePrice = variation.option_sale_prices?.[selectedOption];
+    if (optionSalePrice !== undefined && optionSalePrice !== null && optionSalePrice !== '') {
+      selectedPrice = Number(optionSalePrice);
+    } else if (optionPrice !== undefined && optionPrice !== null && optionPrice !== '') {
+      selectedPrice = Number(optionPrice);
+    } else if (product.sale_price) {
+      selectedPrice = parseFloat(product.sale_price);
     }
   });
 
-  // Show sale price if available and no variant override is active
-  const hasVariantPriceOverride = variations.some(v => {
-    const opt = v.option_prices?.[selectedVariations[v.name]];
-    return typeof opt === 'number';
+  const hasVariantPriceOverride = variations.some((variation) => {
+    const selectedOption = selectedVariations[variation.name];
+    return variation.option_prices?.[selectedOption] !== undefined ||
+      variation.option_sale_prices?.[selectedOption] !== undefined;
   });
-  const displayPrice = (!hasVariantPriceOverride && product.sale_price) ? parseFloat(product.sale_price) : selectedPrice;
+  const displayPrice = hasVariantPriceOverride ? selectedPrice : (product.sale_price ? parseFloat(product.sale_price) : selectedPrice);
 
   const handleVariationSelect = (variationName, option) => {
     setSelectedVariations(prev => ({ ...prev, [variationName]: option }));
@@ -293,8 +302,9 @@ export default function ProductDetail() {
               </label>
               <div className="flex flex-wrap gap-2">
                 {variation.options?.map((option) => {
-                  const optionStock = variation.option_stock?.[option];
-                  const isOutOfStock = typeof optionStock === 'number' && optionStock === 0;
+                  const optionStock = Number(variation.option_stock?.[option]);
+                  const isOutOfStock = variation.option_available?.[option] === false ||
+                    (Number.isFinite(optionStock) && optionStock <= 0);
                   const isSelected = selectedVariations[variation.name] === option;
                   return (
                     <Button

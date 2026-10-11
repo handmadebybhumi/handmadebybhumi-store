@@ -111,6 +111,7 @@ export default function AdminProductEdit() {
         name: v.name || '',
         options: v.options || [],
         option_prices: v.option_prices || {},
+        option_sale_prices: v.option_sale_prices || {},
         option_images: v.option_images || {},
         option_skus: v.option_skus || {},
         option_stock: v.option_stock || {},
@@ -154,6 +155,7 @@ export default function AdminProductEdit() {
             ? variant._optionsText.split(',').map((s) => s.trim()).filter(Boolean)
             : [],
           option_prices: variant.option_prices || {},
+          option_sale_prices: variant.option_sale_prices || {},
           option_images: variant.option_images || {},
           option_skus: variant.option_skus || {},
           option_stock: variant.option_stock || {},
@@ -235,6 +237,7 @@ export default function AdminProductEdit() {
       name: '',
       options: [],
       option_prices: {},
+      option_sale_prices: {},
       option_images: {},
       option_skus: {},
       option_stock: {},
@@ -257,6 +260,7 @@ export default function AdminProductEdit() {
       const variant = { ...updated[vIndex] };
       const fieldMap = {
         price: 'option_prices',
+        sale_price: 'option_sale_prices',
         image: 'option_images',
         sku: 'option_skus',
         stock: 'option_stock',
@@ -666,6 +670,7 @@ export default function AdminProductEdit() {
                               <tr className="border-b border-gray-200">
                                 <th className="text-left py-2 px-2 font-medium text-gray-600">Option</th>
                                 <th className="text-left py-2 px-2 font-medium text-gray-600">Price (INR)</th>
+                                <th className="text-left py-2 px-2 font-medium text-gray-600">Sale Price</th>
                                 <th className="text-left py-2 px-2 font-medium text-gray-600">SKU</th>
                                 <th className="text-left py-2 px-2 font-medium text-gray-600">Stock</th>
                                 <th className="text-left py-2 px-2 font-medium text-gray-600">Image URL</th>
@@ -688,6 +693,17 @@ export default function AdminProductEdit() {
                                   </td>
                                   <td className="py-2 px-2">
                                     <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={variant.option_sale_prices?.[option] ?? ''}
+                                      onChange={(e) => updateVariantOptionField(vIndex, option, 'sale_price', e.target.value)}
+                                      className="h-8 border-gray-200 focus:border-[#D97757] w-24"
+                                      placeholder="Optional"
+                                    />
+                                  </td>
+                                  <td className="py-2 px-2">
+                                    <Input
                                       value={variant.option_skus?.[option] || ''}
                                       onChange={(e) => updateVariantOptionField(vIndex, option, 'sku', e.target.value)}
                                       className="h-8 border-gray-200 focus:border-[#D97757] w-28"
@@ -698,7 +714,7 @@ export default function AdminProductEdit() {
                                     <Input
                                       type="number"
                                       min="0"
-                                      value={variant.option_stock?.[option] || ''}
+                                      value={variant.option_stock?.[option] ?? ''}
                                       onChange={(e) => updateVariantOptionField(vIndex, option, 'stock', e.target.value)}
                                       className="h-8 border-gray-200 focus:border-[#D97757] w-20"
                                       placeholder="—"

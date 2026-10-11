@@ -1,5 +1,13 @@
 import { supabase } from '@/lib/supabaseClient';
 
+const normalizeNumberMap = (values = {}) => Object.fromEntries(
+  Object.entries(values).flatMap(([key, value]) => {
+    if (value === '' || value === null || value === undefined) return [];
+    const number = Number(value);
+    return Number.isFinite(number) ? [[key, number]] : [];
+  })
+);
+
 // ─── Products ───────────────────────────────────────────────────────────────
 
 export async function fetchProducts({ search = '', category = 'all' } = {}) {
@@ -198,9 +206,11 @@ export async function adminCreateVariant(variantData) {
       name: variantData.name,
       options: variantData.options || [],
       option_images: variantData.option_images || {},
-      option_prices: variantData.option_prices || {},
+      option_prices: normalizeNumberMap(variantData.option_prices),
+      option_sale_prices: normalizeNumberMap(variantData.option_sale_prices),
       option_skus: variantData.option_skus || {},
-      option_stock: variantData.option_stock || {},
+      option_stock: normalizeNumberMap(variantData.option_stock),
+      option_available: variantData.option_available || {},
       sort_order: variantData.sort_order || 0,
     })
     .select()
@@ -216,9 +226,11 @@ export async function adminUpdateVariant(id, updates) {
       name: updates.name,
       options: updates.options || [],
       option_images: updates.option_images || {},
-      option_prices: updates.option_prices || {},
+      option_prices: normalizeNumberMap(updates.option_prices),
+      option_sale_prices: normalizeNumberMap(updates.option_sale_prices),
       option_skus: updates.option_skus || {},
-      option_stock: updates.option_stock || {},
+      option_stock: normalizeNumberMap(updates.option_stock),
+      option_available: updates.option_available || {},
       sort_order: updates.sort_order || 0,
     })
     .eq('id', id)
@@ -293,39 +305,41 @@ export async function verifyCartPrices(cartItems) {
 
     const productVariants = variantMap.get(item.id) || [];
 
-    // Determine whether any variant option overrides the price
+    // Apply the selected option's sale price, price override, or product sale price.
     let hasVariantPriceOverride = false;
     let verifiedPrice = parseFloat(product.price);
 
     if (item.selectedVariations) {
       for (const variant of productVariants) {
         const selectedOption = item.selectedVariations[variant.name];
-        if (selectedOption && variant.option_prices) {
-          const optionPrice = variant.option_prices[selectedOption];
-          if (typeof optionPrice === 'number') {
-            verifiedPrice = optionPrice;
-            hasVariantPriceOverride = true;
-          }
+        if (!selectedOption) continue;
+        const optionSalePrice = variant.option_sale_prices?.[selectedOption];
+        const optionPrice = variant.option_prices?.[selectedOption];
+        if (optionSalePrice !== undefined && optionSalePrice !== null && optionSalePrice !== '') {
+          verifiedPrice = Number(optionSalePrice);
+          hasVariantPriceOverride = true;
+        } else if (optionPrice !== undefined && optionPrice !== null && optionPrice !== '') {
+          verifiedPrice = Number(optionPrice);
+          hasVariantPriceOverride = true;
+        } else if (product.sale_price) {
+          verifiedPrice = parseFloat(product.sale_price);
         }
       }
     }
 
-    // If no variant override, apply sale price if available
     if (!hasVariantPriceOverride && product.sale_price) {
       verifiedPrice = parseFloat(product.sale_price);
     }
 
-    // Check stock availability per variant option
+    // Check product-level and selected-option availability.
     let inStock = product.in_stock;
     if (item.selectedVariations) {
       for (const variant of productVariants) {
         const selectedOption = item.selectedVariations[variant.name];
-        if (selectedOption && variant.option_stock) {
-          const optionStock = variant.option_stock[selectedOption];
-          if (typeof optionStock === 'number' && optionStock === 0) {
-            inStock = false;
-          }
-        }
+        if (!selectedOption) continue;
+        if (variant.option_available?.[selectedOption] === false) inStock = false;
+        const optionStock = Number(variant.option_stock?.[selectedOption]);
+        if (Number.isFinite(optionStock) && optionStock <= 0) inStock = false;
       }
     }
 
