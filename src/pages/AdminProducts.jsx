@@ -137,7 +137,14 @@ export default function AdminProducts() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium text-gray-900">{product.name}</TableCell>
+                    <TableCell className="font-medium text-gray-900">
+                      <div className="flex items-center gap-2">
+                        <span>{product.name}</span>
+                        {product.sku?.startsWith('DEMO-') && (
+                          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Demo</Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="border-[#D97757] text-[#D97757] capitalize">
                         {(product.category || '').replace('_', ' ')}

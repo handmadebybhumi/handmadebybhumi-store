@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -115,6 +116,7 @@ export default function AdminProductEdit() {
         option_images: v.option_images || {},
         option_skus: v.option_skus || {},
         option_stock: v.option_stock || {},
+        option_available: v.option_available || {},
         sort_order: v.sort_order || 0,
         _optionsText: (v.options || []).join(', '),
       })));
@@ -159,6 +161,7 @@ export default function AdminProductEdit() {
           option_images: variant.option_images || {},
           option_skus: variant.option_skus || {},
           option_stock: variant.option_stock || {},
+          option_available: variant.option_available || {},
           sort_order: variant.sort_order || 0,
         };
 
@@ -241,6 +244,7 @@ export default function AdminProductEdit() {
       option_images: {},
       option_skus: {},
       option_stock: {},
+      option_available: {},
       sort_order: prev.length,
       _optionsText: '',
     }]);
@@ -264,6 +268,7 @@ export default function AdminProductEdit() {
         image: 'option_images',
         sku: 'option_skus',
         stock: 'option_stock',
+        available: 'option_available',
       };
       const key = fieldMap[fieldKey];
       variant[key] = { ...variant[key], [option]: value };
@@ -673,6 +678,7 @@ export default function AdminProductEdit() {
                                 <th className="text-left py-2 px-2 font-medium text-gray-600">Sale Price</th>
                                 <th className="text-left py-2 px-2 font-medium text-gray-600">SKU</th>
                                 <th className="text-left py-2 px-2 font-medium text-gray-600">Stock</th>
+                                <th className="text-left py-2 px-2 font-medium text-gray-600">Available</th>
                                 <th className="text-left py-2 px-2 font-medium text-gray-600">Image URL</th>
                               </tr>
                             </thead>
@@ -718,6 +724,13 @@ export default function AdminProductEdit() {
                                       onChange={(e) => updateVariantOptionField(vIndex, option, 'stock', e.target.value)}
                                       className="h-8 border-gray-200 focus:border-[#D97757] w-20"
                                       placeholder="—"
+                                    />
+                                  </td>
+                                  <td className="py-2 px-2">
+                                    <Checkbox
+                                      checked={variant.option_available?.[option] !== false}
+                                      onCheckedChange={(checked) => updateVariantOptionField(vIndex, option, 'available', checked)}
+                                      aria-label={`${option} availability`}
                                     />
                                   </td>
                                   <td className="py-2 px-2">

@@ -151,9 +151,6 @@ export default function ProductDetail() {
 
   const variations = variants || [];
 
-  // Photo belonging to the currently selected options (e.g. a specific colour)
-  const variationImage = selectedVariantImage;
-
   const gallery = selectedVariantImages.length > 0
     ? [...selectedVariantImages, ...images.filter((image) => !selectedVariantImages.includes(image))]
     : images;
