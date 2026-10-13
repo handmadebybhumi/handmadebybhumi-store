@@ -7,12 +7,19 @@ import { createPageUrl } from "@/utils";
 import { ShoppingCart, Ruler, Package } from "lucide-react";
 
 export default function ProductCard({ product }) {
-  // Cheapest price across the product's options, so the card matches what the detail page shows
-  const optionPrices = (product.variations || []).flatMap(
-    (variation) => Object.values(variation.option_prices || {})
-  );
-  const startingPrice = optionPrices.length > 0 ? Math.min(...optionPrices) : product.price;
-  const showFromPrice = optionPrices.length > 0;
+  // Cheapest effective price across all options (sale price > option price > base price)
+  const allOptionPrices = (product.variations || []).flatMap((variation) => {
+    const options = variation.options || [];
+    return options.map((option) => {
+      const sale = variation.option_sale_prices?.[option];
+      const override = variation.option_prices?.[option];
+      if (sale !== undefined && sale !== null && sale !== '') return Number(sale);
+      if (override !== undefined && override !== null && override !== '') return Number(override);
+      return parseFloat(product.sale_price || product.price);
+    });
+  });
+  const startingPrice = allOptionPrices.length > 0 ? Math.min(...allOptionPrices) : (product.sale_price || product.price);
+  const showFromPrice = allOptionPrices.length > 0;
   const hasVariants = (product.variations || []).length > 0;
 
   const detailUrl = `${createPageUrl("ProductDetail")}?id=${product.id}`;
